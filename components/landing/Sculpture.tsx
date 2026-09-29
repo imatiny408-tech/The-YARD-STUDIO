@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 type Props = {
   /** 0..1 scroll progress through the hero; drives rotation and reveal. */
   progress: { get: () => number };
-  /** Explore mode swaps the steel braid for a warm copper weave and gold mic. */
+  /** Explore mode swaps the steel finish for gold and copper. */
   explore: boolean;
   /** Increments whenever the user taps the stand (pulse). */
   pulse: number;
@@ -28,12 +28,22 @@ const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] 
 const LIGHT = norm([-0.45, 0.65, -0.6]);
 const FILL = norm([0.8, -0.1, -0.4]);
 
+// Stand layout in world units (y up).
+const POLE_X = 0.35;
+const POLE_TOP = 0.42;
+const OUTER_END = -0.25; // outer braid stops here, cordex-style cutaway
+const INNER_END = 0.02; // inner braid stops here; glossy core above
+const OUTER_R = 0.085;
+const INNER_R = 0.066;
+const CORE_R = 0.05;
+
 /**
- * A braided gooseneck mic stand holding a handheld vocal mic, drawn on a 2D
- * canvas with a small perspective projector. The braided arm is the original
- * "cable" sculpture; it rises out of frame, arcs over and points the mic down
- * at the singer. It turns with scroll, leans toward the cursor, wobbles when
- * tapped and sends sound rings out of the grille.
+ * A mic stand with a handheld vocal mic, drawn on a 2D canvas with a small
+ * perspective projector. The pole is a braided steel sleeve with a cutaway
+ * that reveals an inner braid and a glossy core (after the cordex product
+ * shot). The mic sits in a clip at the top, angled up, with its cable hanging
+ * down. It turns with scroll, leans toward the cursor, and a tap sends sound
+ * rings out of the grille.
  */
 export default function Sculpture({ progress, explore, pulse, onHotspots }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -76,31 +86,27 @@ export default function Sculpture({ progress, explore, pulse, onHotspots }: Prop
     };
     window.addEventListener("pointermove", onMove);
 
-    const CARRIERS = 16; // 8 each direction, like a real 2-over-2 braid
-    const WIRES = 3; // fine wires per carrier
-    const STEPS = 110;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // Gooseneck spine: rises from below the frame, arcs over, ends pointing down-left.
-    const P0: V3 = [0.55, -1.95, 0];
-    const P1: V3 = [0.5, 1.2, 0];
-    const P2: V3 = [0.02, 0.62, 0.12];
-    const BRAID_END = 0.9;
-
-    // Handheld mic, in its own frame: y runs along the mic toward the grille.
+    // Handheld mic in its own frame: y runs along the mic toward the grille.
     const HANDLE: [number, number][] = [
-      [0.118, 0.9], [0.124, 0.87], [0.118, 0.84], [0.1, 0.45], [0.088, 0.1], [0.082, -0.1],
-      [0.078, -0.16], [0.06, -0.2], [0.03, -0.215], [0, -0.22],
+      [0.118, 0.72], [0.124, 0.69], [0.118, 0.66], [0.1, 0.3], [0.088, -0.05], [0.082, -0.25],
+      [0.078, -0.31], [0.06, -0.35], [0.03, -0.365], [0, -0.37],
     ];
-    const COLLAR: [number, number][] = [[0.12, 0.97], [0.128, 0.95], [0.128, 0.9], [0.12, 0.885]];
-    const CLIP: [number, number][] = [[0.1, 0.22], [0.108, 0.2], [0.108, 0.02], [0.1, 0]];
-    const BALL_C = 1.1;
+    const COLLAR: [number, number][] = [[0.12, 0.79], [0.128, 0.77], [0.128, 0.72], [0.12, 0.705]];
+    const CLIP: [number, number][] = [[0.098, 0.12], [0.108, 0.1], [0.108, -0.1], [0.098, -0.12]];
+    const BALL_C = 0.92;
     const BALL_R = 0.19;
     const BALL_IN: [number, number][] = [];
     for (let i = 0; i <= 10; i++) {
       const a = (i / 10) * Math.PI;
       BALL_IN.push([BALL_R * 0.9 * Math.sin(a), BALL_C + BALL_R * 0.9 * Math.cos(a)]);
     }
+    // Clip holder: a short swivel cylinder on top of the pole.
+    const HOLDER: [number, number][] = [[0, 0.62], [0.05, 0.615], [0.06, 0.6], [0.06, 0.44], [0.05, 0.43], [0, 0.425]];
+    // Mic frame: centre at the clip, axis angled up and out to the left.
+    const MIC_C: V3 = [POLE_X, 0.72, 0];
+    const MIC_A = norm([-0.78, 0.6, 0.12]);
 
     const frame = (ms: number) => {
       raf = requestAnimationFrame(frame);
@@ -118,20 +124,32 @@ export default function Sculpture({ progress, explore, pulse, onHotspots }: Prop
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
-      const S = Math.min(w * (mobile ? 1.25 : 1), h) * 0.44;
-      const rotY = -0.3 + p * 1.0 + m.x * 0.2 + (reduce ? 0 : Math.sin(t * 0.35) * 0.05);
-      const rotX = 0.1 - p * 0.2 + m.y * 0.1;
-      const rotZ = p * 0.25;
-      const [cy, sy, cx, sx, cz, sz] = [Math.cos(rotY), Math.sin(rotY), Math.cos(rotX), Math.sin(rotX), Math.cos(rotZ), Math.sin(rotZ)];
-      const cam = 3.4;
-      const ox = w * (mobile ? 0.84 : 0.63) - p * w * 0.05;
-      const oy = h * (mobile ? 0.4 : 0.48) + p * h * 0.05;
+      const age = t - hit.current.t;
+      const amp = age < 2 ? Math.exp(-age * 2.6) * 0.06 : 0;
 
-      const rot = (v: V3): V3 => {
+      const S = Math.min(w * (mobile ? 1.05 : 1), h) * 0.36;
+      // Spin the stand around its pole; a tap makes the whole rig shake.
+      const rotY = -0.35 + p * 1.4 + m.x * 0.25 + (reduce ? 0 : Math.sin(t * 0.3) * 0.08);
+      const rotX = 0.12 - p * 0.1 + m.y * 0.08;
+      const rotZ = Math.sin(age * 32) * amp;
+      const [cy, sy, cx, sx, cz, sz] = [Math.cos(rotY), Math.sin(rotY), Math.cos(rotX), Math.sin(rotX), Math.cos(rotZ), Math.sin(rotZ)];
+      const cam = 3.6;
+      const ox = w * (mobile ? 0.7 : 0.6) - p * w * 0.04;
+      const oy = h * (mobile ? 0.6 : 0.7) + p * h * 0.04;
+
+      const rot = (v0: V3): V3 => {
+        const v: V3 = [v0[0] - POLE_X, v0[1], v0[2]]; // spin about the pole
         const x0 = v[0] * cz - v[1] * sz;
         const y0 = v[0] * sz + v[1] * cz;
         const x1 = x0 * cy + v[2] * sy;
         const z1 = -x0 * sy + v[2] * cy;
+        return [x1, y0 * cx - z1 * sx, y0 * sx + z1 * cx];
+      };
+      const rotN = (n: V3): V3 => {
+        const x0 = n[0] * cz - n[1] * sz;
+        const y0 = n[0] * sz + n[1] * cz;
+        const x1 = x0 * cy + n[2] * sy;
+        const z1 = -x0 * sy + n[2] * cy;
         return [x1, y0 * cx - z1 * sx, y0 * sx + z1 * cx];
       };
       const toScreen = (r: V3) => {
@@ -140,77 +158,179 @@ export default function Sculpture({ progress, explore, pulse, onHotspots }: Prop
       };
       const project = (v: V3) => toScreen(rot(v));
 
-      // Tap: the arm wobbles like a gooseneck and the grille sends rings.
-      const age = t - hit.current.t;
-      const amp = age < 2.5 ? Math.exp(-age * 2.4) * 0.07 : 0;
-
-      const spine = (u: number) => {
-        const a = (1 - u) * (1 - u);
-        const b = 2 * u * (1 - u);
-        const c = u * u;
-        const pos: V3 = [a * P0[0] + b * P1[0] + c * P2[0], a * P0[1] + b * P1[1] + c * P2[1], a * P0[2] + b * P1[2] + c * P2[2]];
-        const tan3 = norm([
-          2 * (1 - u) * (P1[0] - P0[0]) + 2 * u * (P2[0] - P1[0]),
-          2 * (1 - u) * (P1[1] - P0[1]) + 2 * u * (P2[1] - P1[1]),
-          2 * (1 - u) * (P1[2] - P0[2]) + 2 * u * (P2[2] - P1[2]),
-        ]);
-        const N = norm([-tan3[1], tan3[0], 0]);
-        const wob = amp * Math.sin(u * Math.PI) * Math.sin(age * 34);
-        pos[0] += N[0] * wob;
-        pos[1] += N[1] * wob;
-        return { pos, N, B: norm(cross(tan3, N)), T: tan3 };
-      };
-
-      // Blinn-Phong-ish light with a coloured rim, for the mic's solid parts.
       const light = (n: V3, mat: Material, pos: V3): string => {
         const view = norm([-pos[0], -pos[1], -cam - pos[2]]);
         const key = Math.max(0, dot(n, LIGHT));
         const fill = Math.max(0, dot(n, FILL)) * 0.25;
         const spec = Math.pow(Math.max(0, dot(n, norm([LIGHT[0] + view[0], LIGHT[1] + view[1], LIGHT[2] + view[2]]))), mat.shine) * mat.spec;
         const rim = Math.pow(1 - Math.max(0, dot(n, view)), 3);
-        const c = mat.base.map((b, i) => b * (mat.ambient + key * 0.85 + fill) + 255 * spec + mat.rim[i] * rim * 0.6);
+        const c = mat.base.map((b, i) => b * (mat.ambient + key * 0.85 + fill) + 255 * spec + mat.rim[i] * rim * 0.55);
         return `rgb(${c.map((v) => Math.round(Math.min(255, v))).join(",")})`;
       };
 
-      // ---------------------------------------------------------------- braid
-      const braidR = 0.1;
-      const coreR = 0.075;
+      // Steel in Full mode, copper/gold in Explore mode; never pink.
+      const steel = (lum: number) => {
+        const v = Math.min(255, lum * 255);
+        return `rgb(${Math.round(Math.min(255, v + md * 70))},${Math.round(v + md * 18)},${Math.round(Math.max(0, v - md * 40))})`;
+      };
+      const rimTint: RGB = mix([190, 205, 225], [255, 200, 130], md);
+
+      // ------------------------------------------------------------ braids
       const front: Seg[] = [];
       const back: Seg[] = [];
-      for (let k = 0; k < CARRIERS; k++) {
-        const dir = k % 2 ? 1 : -1;
-        const base = (Math.PI * 2 * Math.floor(k / 2)) / (CARRIERS / 2);
-        const accent = md < 0.5 && k === 5;
-        for (let wi = 0; wi < WIRES; wi++) {
-          const phase = base + wi * 0.09;
-          let last: ReturnType<typeof toScreen> | null = null;
-          for (let i = 0; i <= STEPS; i++) {
-            const u = (i / STEPS) * BRAID_END;
-            const s = spine(u);
-            const phi = phase + dir * 30 * u + (reduce ? 0 : t * 0.12 * dir);
-            const weave = Math.sin((CARRIERS / 4) * (phi - dir * 30 * u - base) * 2 + (dir > 0 ? 0 : Math.PI));
-            const r = braidR + 0.009 * weave;
-            const cph = Math.cos(phi);
-            const sph = Math.sin(phi);
-            const nrm: V3 = [cph * s.N[0] + sph * s.B[0], cph * s.N[1] + sph * s.B[1], cph * s.N[2] + sph * s.B[2]];
-            const pt = project([s.pos[0] + r * nrm[0], s.pos[1] + r * nrm[1], s.pos[2] + r * nrm[2]]);
-            if (last) {
-              const vn = rot(nrm);
-              const diff = Math.max(0, dot(vn, LIGHT));
-              const spec = Math.pow(diff, 12);
-              const lum = 0.08 + diff * 0.5 + spec * 0.55 + (weave > 0 ? 0.08 : -0.06);
-              let col: string;
-              if (accent) col = `rgb(${Math.round(150 + lum * 110)},${Math.round(30 + lum * 90)},${Math.round(80 + lum * 110)})`;
-              else {
-                const v = Math.min(255, lum * 255);
-                col = `rgb(${Math.round(Math.min(255, v + md * 70))},${Math.round(v + md * 18)},${Math.round(Math.max(0, v - md * 30))})`;
+      const braid = (y0: number, y1: number, R: number, carriers: number, wires: number, twist: number, width: number, bright: number) => {
+        const steps = Math.max(20, Math.round((y1 - y0) * 70));
+        for (let k = 0; k < carriers; k++) {
+          const dir = k % 2 ? 1 : -1;
+          const base = (Math.PI * 2 * Math.floor(k / 2)) / (carriers / 2);
+          for (let wi = 0; wi < wires; wi++) {
+            const phase = base + wi * (0.55 / wires);
+            let last: ReturnType<typeof toScreen> | null = null;
+            for (let i = 0; i <= steps; i++) {
+              const y = y0 + ((y1 - y0) * i) / steps;
+              const phi = phase + dir * twist * y + (reduce ? 0 : t * 0.1 * dir);
+              const weave = Math.sin((carriers / 4) * (phi - dir * twist * y - base) * 2 + (dir > 0 ? 0 : Math.PI));
+              const r = R + R * 0.08 * weave;
+              const n: V3 = [Math.cos(phi), 0, Math.sin(phi)];
+              const pt = project([POLE_X + r * n[0], y, r * n[2]]);
+              if (last) {
+                const vn = rotN(n);
+                const diff = Math.max(0, dot(vn, LIGHT));
+                const lum = (0.08 + diff * 0.5 + Math.pow(diff, 12) * 0.6 + (weave > 0 ? 0.08 : -0.06)) * bright;
+                (vn[2] < -0.05 ? front : back).push({ x1: last.x, y1: last.y, x2: pt.x, y2: pt.y, z: pt.z, w: Math.max(0.7, width * pt.k * S), c: steel(lum) });
               }
-              (vn[2] < -0.05 ? front : back).push({ x1: last.x, y1: last.y, x2: pt.x, y2: pt.y, z: pt.z, w: Math.max(0.8, 0.013 * pt.k * S), c: col });
+              last = pt;
             }
-            last = pt;
           }
         }
+      };
+      braid(-2.4, OUTER_END, OUTER_R, 16, 4, 14, 0.011, 1);
+      braid(-2.4, INNER_END, INNER_R, 16, 3, -18, 0.008, 0.75);
+
+      const quads: Quad[] = [];
+      const frameLathe = (profile: [number, number][], mat: Material, segs: number, local: (x: number, y: number, z: number) => V3, dirOf: (x: number, y: number, z: number) => V3) => {
+        const ring = profile.map(([r, y]) =>
+          Array.from({ length: segs }, (_, i) => {
+            const a = (i / segs) * Math.PI * 2;
+            return rot(local(r * Math.cos(a), y, r * Math.sin(a)));
+          }),
+        );
+        for (let j = 0; j < profile.length - 1; j++) {
+          const dr = profile[j + 1][0] - profile[j][0];
+          const dy = profile[j + 1][1] - profile[j][1];
+          for (let i = 0; i < segs; i++) {
+            const i2 = (i + 1) % segs;
+            const a = ring[j][i], b = ring[j][i2], c = ring[j + 1][i2], d = ring[j + 1][i];
+            const ctr: V3 = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2, (a[2] + c[2]) / 2];
+            const ang = ((i + 0.5) / segs) * Math.PI * 2;
+            const n = rotN(dirOf(-dy * Math.cos(ang), dr, -dy * Math.sin(ang)));
+            if (dot(n, [ctr[0], ctr[1], ctr[2] + cam]) > 0) continue;
+            quads.push({ pts: [a, b, c, d].map((v) => toScreen(v)), z: ctr[2], fill: light(n, mat, ctr) });
+          }
+        }
+      };
+      const poleLocal = (x: number, y: number, z: number): V3 => [POLE_X + x, y, z];
+      const poleDir = (x: number, y: number, z: number): V3 => norm([x, y, z]);
+
+      const chromeMat: Material = { base: mix([160, 164, 172], [225, 180, 95], md), spec: 1, shine: 60, rim: rimTint, ambient: 0.3 };
+      const blackMat: Material = { base: mix([24, 24, 27], [40, 32, 22], md), spec: 0.8, shine: 36, rim: rimTint, ambient: 0.35 };
+      const clipMat: Material = { base: [18, 18, 20], spec: 0.5, shine: 18, rim: rimTint, ambient: 0.4 };
+      const innerMat: Material = { base: [12, 12, 14], spec: 0.2, shine: 10, rim: rimTint, ambient: 0.4 };
+
+      // Dark liner under the braids, then the exposed glossy core up to the holder.
+      const liner: [number, number][] = [[CORE_R, INNER_END], [CORE_R, -2.4]];
+      frameLathe(liner, { base: [10, 10, 12], spec: 0.1, shine: 8, rim: [40, 40, 50], ambient: 0.5 }, 28, poleLocal, poleDir);
+      frameLathe([[CORE_R, POLE_TOP + 0.02], [CORE_R, INNER_END]], chromeMat, 40, poleLocal, poleDir);
+      frameLathe(HOLDER, clipMat, 32, poleLocal, poleDir);
+      const poleQuads = quads.splice(0);
+
+      // Mic frame.
+      const U = norm(cross(MIC_A, [0, 0, 1]));
+      const V = norm(cross(MIC_A, U));
+      const micLocal = (x: number, y: number, z: number): V3 => [
+        MIC_C[0] + x * U[0] + y * MIC_A[0] + z * V[0],
+        MIC_C[1] + x * U[1] + y * MIC_A[1] + z * V[1],
+        MIC_C[2] + x * U[2] + y * MIC_A[2] + z * V[2],
+      ];
+      const micDir = (x: number, y: number, z: number): V3 => norm([x * U[0] + y * MIC_A[0] + z * V[0], x * U[1] + y * MIC_A[1] + z * V[1], x * U[2] + y * MIC_A[2] + z * V[2]]);
+
+      frameLathe(HANDLE, blackMat, 56, micLocal, micDir);
+      frameLathe(COLLAR, chromeMat, 56, micLocal, micDir);
+      frameLathe(CLIP, clipMat, 40, micLocal, micDir);
+      const micQuads = quads.splice(0);
+      frameLathe(BALL_IN, innerMat, 32, micLocal, micDir);
+      const innerQuads = quads.splice(0);
+
+      // Ball grille wires.
+      const gFront: Seg[] = [];
+      const gBack: Seg[] = [];
+      const ballPt = (theta: number, a: number) => ({
+        pos: micLocal(BALL_R * Math.sin(theta) * Math.cos(a), BALL_C + BALL_R * Math.cos(theta), BALL_R * Math.sin(theta) * Math.sin(a)),
+        n: micDir(Math.sin(theta) * Math.cos(a), Math.cos(theta), Math.sin(theta) * Math.sin(a)),
+      });
+      const gWire = (a: { pos: V3; n: V3 }, b: { pos: V3; n: V3 }) => {
+        const ra = rot(a.pos);
+        const rb = rot(b.pos);
+        const rn = rotN(b.n);
+        const facing = dot(rn, [rb[0], rb[1], rb[2] + cam]) < 0;
+        const pa = toScreen(ra);
+        const pb = toScreen(rb);
+        (facing ? gFront : gBack).push({
+          x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, z: (ra[2] + rb[2]) / 2,
+          w: Math.max(0.6, 0.006 * pb.k * S),
+          c: facing ? light(rn, chromeMat, rb) : "rgba(90,90,96,0.5)",
+        });
+      };
+      const TH_MAX = Math.PI * 0.86;
+      for (let i = 0; i < 30; i++) {
+        const a = (i / 30) * Math.PI * 2;
+        let prev = ballPt(0.001, a);
+        for (let j = 1; j <= 16; j++) {
+          const cur = ballPt((j / 16) * TH_MAX, a);
+          gWire(prev, cur);
+          prev = cur;
+        }
       }
+      for (let j = 1; j <= 9; j++) {
+        const th = (j / 9) * TH_MAX;
+        let prev = ballPt(th, 0);
+        for (let i = 1; i <= 40; i++) {
+          const cur = ballPt(th, (i / 40) * Math.PI * 2);
+          gWire(prev, cur);
+          prev = cur;
+        }
+      }
+
+      // Cable: out of the handle's end, sags, then hangs straight down.
+      const butt = micLocal(0, -0.37, 0);
+      const c1: V3 = [butt[0] + 0.28, butt[1] - 0.12, butt[2] + 0.05];
+      const c2: V3 = [butt[0] + 0.42, butt[1] - 0.6, butt[2] + 0.08];
+      const c3: V3 = [butt[0] + 0.44, -2.6, butt[2] + 0.1];
+      const cablePts: ReturnType<typeof toScreen>[] = [];
+      for (let i = 0; i <= 40; i++) {
+        const u = i / 40;
+        const a = (1 - u) ** 3, b = 3 * u * (1 - u) ** 2, c = 3 * u * u * (1 - u), d = u ** 3;
+        cablePts.push(project([
+          a * butt[0] + b * c1[0] + c * c2[0] + d * c3[0],
+          a * butt[1] + b * c1[1] + c * c2[1] + d * c3[1],
+          a * butt[2] + b * c1[2] + c * c2[2] + d * c3[2],
+        ]));
+      }
+      const drawCable = () => {
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        for (const [f, off, col] of [[1, 0, "#0c0c0e"], [0.35, -0.3, "rgba(170,178,195,0.35)"]] as const) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 0.022 * S * f;
+          ctx.beginPath();
+          cablePts.forEach((pt, i) => {
+            const o = off * 0.011 * S;
+            if (i) ctx.lineTo(pt.x + o, pt.y + o * 0.3);
+            else ctx.moveTo(pt.x + o, pt.y + o * 0.3);
+          });
+          ctx.stroke();
+        }
+      };
 
       const drawSegs = (list: Seg[]) => {
         list.sort((a, b) => b.z - a.z);
@@ -246,171 +366,52 @@ export default function Sculpture({ progress, explore, pulse, onHotspots }: Prop
         }
       };
 
+      // Stage glow behind the mic head (neutral white, gold in Explore).
+      const ball = project(micLocal(0, BALL_C, 0));
+      const glow = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, S * 1.6);
+      glow.addColorStop(0, `rgba(255,${Math.round(255 - md * 60)},${Math.round(255 - md * 150)},${0.07 + amp * 2})`);
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+
+      // Back to front: cable (it hangs behind the pole from this angle), pole, mic.
+      const cableBehind = cablePts[20].z > project([POLE_X, cablePts[20].y, 0]).z;
+      if (cableBehind) drawCable();
       drawSegs(back);
-
-      // Core: dark under the braid, a short chrome ferrule where it's exposed.
-      const coreSteps = 90;
-      const pts = Array.from({ length: coreSteps + 1 }, (_, i) => {
-        const u = i / coreSteps;
-        return { u, ...project(spine(u).pos) };
-      });
-      const layers = [
-        { f: 1, c: (e: boolean) => (e ? `rgb(${120 + md * 40},${120 + md * 10},${125 - md * 20})` : "#141414"), off: 0 },
-        { f: 0.62, c: (e: boolean) => (e ? `rgb(${190 + md * 30},192,${198 - md * 30})` : "#1d1d1d"), off: -0.18 },
-        { f: 0.2, c: (e: boolean) => (e ? "rgba(255,255,255,0.95)" : "#2a2a2a"), off: -0.42 },
-      ];
-      ctx.lineCap = "round";
-      for (const L of layers) {
-        for (let i = 1; i < pts.length; i++) {
-          const a = pts[i - 1];
-          const b = pts[i];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const len = Math.hypot(dx, dy) || 1;
-          const rad = coreR * b.k * S;
-          const nx = (-dy / len) * rad * L.off;
-          const ny = (dx / len) * rad * L.off;
-          ctx.strokeStyle = L.c(b.u > BRAID_END - 0.01);
-          ctx.lineWidth = rad * 2 * L.f;
-          ctx.beginPath();
-          ctx.moveTo(a.x + nx, a.y + ny);
-          ctx.lineTo(b.x + nx, b.y + ny);
-          ctx.stroke();
-        }
-      }
+      drawQuads(poleQuads);
       drawSegs(front);
-
-      // ------------------------------------------------------------------ mic
-      // Local frame at the tip of the arm; the mic continues along the arm.
-      const tip = spine(1);
-      const A = tip.T;
-      const U = tip.N;
-      const V = norm(cross(A, U));
-      const local = (x: number, y: number, z: number): V3 => [
-        tip.pos[0] + x * U[0] + y * A[0] + z * V[0],
-        tip.pos[1] + x * U[1] + y * A[1] + z * V[1],
-        tip.pos[2] + x * U[2] + y * A[2] + z * V[2],
-      ];
-      const localDir = (x: number, y: number, z: number): V3 => norm([x * U[0] + y * A[0] + z * V[0], x * U[1] + y * A[1] + z * V[1], x * U[2] + y * A[2] + z * V[2]]);
-
-      const quads: Quad[] = [];
-      const lathe = (profile: [number, number][], mat: Material, segs = 56) => {
-        const ring = profile.map(([r, y]) =>
-          Array.from({ length: segs }, (_, i) => {
-            const a = (i / segs) * Math.PI * 2;
-            return rot(local(r * Math.cos(a), y, r * Math.sin(a)));
-          }),
-        );
-        for (let j = 0; j < profile.length - 1; j++) {
-          const dr = profile[j + 1][0] - profile[j][0];
-          const dy = profile[j + 1][1] - profile[j][1];
-          for (let i = 0; i < segs; i++) {
-            const i2 = (i + 1) % segs;
-            const a = ring[j][i], b = ring[j][i2], c = ring[j + 1][i2], d = ring[j + 1][i];
-            const ctr: V3 = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2, (a[2] + c[2]) / 2];
-            const ang = ((i + 0.5) / segs) * Math.PI * 2;
-            const n = rot(localDir(-dy * Math.cos(ang), dr, -dy * Math.sin(ang)));
-            if (dot(n, [ctr[0], ctr[1], ctr[2] + cam]) > 0) continue;
-            quads.push({ pts: [a, b, c, d].map((v) => toScreen(v)), z: ctr[2], fill: light(n, mat, ctr) });
-          }
-        }
-      };
-
-      const blackMat: Material = { base: mix([26, 26, 29], [196, 150, 62], md), spec: 0.9, shine: 40, rim: mix([255, 77, 157], [255, 200, 120], md), ambient: 0.35 };
-      const clipMat: Material = { base: [20, 20, 22], spec: 0.4, shine: 16, rim: [120, 120, 130], ambient: 0.4 };
-      const chromeMat: Material = { base: mix([150, 152, 160], [220, 176, 90], md), spec: 1, shine: 60, rim: [255, 120, 180], ambient: 0.3 };
-      const pinkMat: Material = { base: [255, 60, 150], spec: 0.8, shine: 30, rim: [255, 190, 220], ambient: 0.4 };
-      const innerMat: Material = { base: [12, 12, 14], spec: 0.2, shine: 10, rim: [255, 77, 157], ambient: 0.4 };
-
-      lathe(HANDLE, blackMat);
-      lathe(COLLAR, pinkMat);
-      lathe(CLIP, clipMat, 40);
-
-      // Ball grille wires: meridians and parallels over a sphere.
-      const gFront: Seg[] = [];
-      const gBack: Seg[] = [];
-      const ballPt = (theta: number, a: number): { pos: V3; n: V3 } => {
-        const n = localDir(Math.sin(theta) * Math.cos(a), Math.cos(theta), Math.sin(theta) * Math.sin(a));
-        return { pos: local(BALL_R * Math.sin(theta) * Math.cos(a), BALL_C + BALL_R * Math.cos(theta), BALL_R * Math.sin(theta) * Math.sin(a)), n };
-      };
-      const gWire = (a: { pos: V3; n: V3 }, b: { pos: V3; n: V3 }, width: number) => {
-        const ra = rot(a.pos);
-        const rb = rot(b.pos);
-        const rn = rot(b.n);
-        const facing = dot(rn, [rb[0], rb[1], rb[2] + cam]) < 0;
-        const pa = toScreen(ra);
-        const pb = toScreen(rb);
-        (facing ? gFront : gBack).push({
-          x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, z: (ra[2] + rb[2]) / 2,
-          w: Math.max(0.6, width * pb.k * S),
-          c: facing ? light(rn, chromeMat, rb) : "rgba(90,90,96,0.5)",
-        });
-      };
-      const TH_MAX = Math.PI * 0.86; // grille stops where it meets the collar
-      for (let i = 0; i < 30; i++) {
-        const a = (i / 30) * Math.PI * 2;
-        let prev = ballPt(0.001, a);
-        for (let j = 1; j <= 16; j++) {
-          const cur = ballPt((j / 16) * TH_MAX, a);
-          gWire(prev, cur, 0.006);
-          prev = cur;
-        }
-      }
-      for (let j = 1; j <= 9; j++) {
-        const th = (j / 9) * TH_MAX;
-        let prev = ballPt(th, 0);
-        for (let i = 1; i <= 40; i++) {
-          const cur = ballPt(th, (i / 40) * Math.PI * 2);
-          gWire(prev, cur, 0.006);
-          prev = cur;
-        }
-      }
-
-      const inner: Quad[] = [];
-      const n0 = quads.length;
-      lathe(BALL_IN, innerMat, 32);
-      inner.push(...quads.splice(n0));
-
+      if (!cableBehind) drawCable();
       drawSegs(gBack);
-      drawQuads(inner);
-      drawQuads(quads);
+      drawQuads(innerQuads);
+      drawQuads(micQuads);
       drawSegs(gFront);
 
-      // Sound rings out of the grille after a tap, plus a faint idle pulse.
-      const ball = project(local(0, BALL_C, 0));
+      // Sound rings after a tap, plus a faint idle pulse.
       const br = BALL_R * ball.k * S;
       for (const d of age < 1.8 ? [0, 0.18, 0.36] : []) {
         const tt = age - d;
         if (tt < 0) continue;
-        ctx.strokeStyle = `rgba(255,77,157,${Math.max(0, 0.6 - tt * 0.4)})`;
+        ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, 0.55 - tt * 0.4)})`;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, br * (1.3 + tt * 5), 0, Math.PI * 2);
         ctx.stroke();
       }
       const ph = (t * 0.35) % 1;
-      ctx.strokeStyle = `rgba(255,255,255,${0.12 * (1 - ph)})`;
+      ctx.strokeStyle = `rgba(255,255,255,${0.1 * (1 - ph)})`;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, br * (1.4 + ph * 2), 0, Math.PI * 2);
       ctx.stroke();
 
-      // Stage glow around the mic head, drawn behind everything.
-      const glow = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, S * 1.3);
-      glow.addColorStop(0, `rgba(255,${md ? 170 : 77},${md ? 90 : 157},${0.14 + amp * 3})`);
-      glow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.globalCompositeOperation = "destination-over";
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, w, h);
-      ctx.globalCompositeOperation = "source-over";
-
       if (hotspotCb.current) {
-        const arm = (u: number) => {
-          const s = spine(u);
-          return project([s.pos[0], s.pos[1], s.pos[2] - braidR]);
-        };
         hotspotCb.current(
-          [arm(0.35), arm(0.62), project(local(0, 0.1, -0.11)), ball].map((pt) => ({ x: pt.x, y: pt.y })),
+          [
+            project([POLE_X, -0.9, -OUTER_R]), // braided sleeve
+            project([POLE_X, -0.1, -INNER_R]), // cutaway
+            project(micLocal(0, 0, -0.11)), // clip
+            ball, // grille
+          ].map((pt) => ({ x: pt.x, y: pt.y })),
         );
       }
     };

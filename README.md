@@ -14,7 +14,7 @@ npm run build      # production build + type check
 
 ### Landing (`/`)
 A scroll-driven, cinematic front page modeled on the car-rental and "cordex" references:
-- **Hero stage**: the original braided cable, reshaped into a gooseneck mic stand holding a handheld vocal mic, rendered live on canvas. It turns as you scroll and leans toward the cursor. Tap it and the arm wobbles and the grille sends out sound rings. **Full mode / Explore** in the nav switches it to a copper braid and gold mic, with hotspots and spec cards.
+- **Hero stage**: a steel mic stand rendered live on canvas. The pole is a braided sleeve with a cordex-style cutaway to an inner braid and a glossy core. A handheld mic sits in a clip at the top, angled up, with its cable hanging down. The stand turns as you scroll and leans toward the cursor, and a tap shakes the rig and sends sound rings out of the grille. **Full mode / Explore** in the nav switches it to copper and gold, with hotspots and spec cards.
 - **Statement**: copy revealed word by word as you scroll, with a creator strip that moves sideways as you scroll down.
 - **Toolkit carousel**: the "fleet" section. Swipe, drag or use the arrow keys, open the specs, then jump into the tool.
 - **Play**: eight live pads (keys `A`–`K`) with a spectrum readout.
