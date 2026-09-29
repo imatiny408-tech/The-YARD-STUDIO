@@ -38,7 +38,7 @@ All audio is **synthesized in the browser**, so the prototype ships without audi
 
 ### Brand
 Marks from the brand sheet, redrawn as SVG in `components/Logo.tsx`:
-- **Liquid Y**: app mark and favicon
+- **Liquid Y**: app mark and favicon, in an acid-lime-to-mint gradient
 - **Bubble wordmark**: set in Bagel Fat One
 - **Community shape**: squads and the loading indicator
 - **Vinyl blob**: studio

@@ -6,10 +6,10 @@ export function LiquidY({ className = "h-6 w-6", mono = false }: { className?: s
     <svg viewBox="0 0 48 48" className={className} aria-hidden>
       <defs>
         <linearGradient id="ly-fill" gradientUnits="userSpaceOnUse" x1="6" y1="6" x2="42" y2="44">
-          <stop offset="0%" stopColor="#7ce8ff" />
-          <stop offset="35%" stopColor="#6f7dff" />
-          <stop offset="65%" stopColor="#e27bff" />
-          <stop offset="100%" stopColor="#ffe28a" />
+          <stop offset="0%" stopColor="#f4ff8a" />
+          <stop offset="40%" stopColor="#c8f230" />
+          <stop offset="75%" stopColor="#5fe3a1" />
+          <stop offset="100%" stopColor="#1fb89a" />
         </linearGradient>
         <radialGradient id="ly-shine" gradientUnits="userSpaceOnUse" cx="15" cy="12" r="18">
           <stop offset="0%" stopColor="#fff" stopOpacity="0.9" />
