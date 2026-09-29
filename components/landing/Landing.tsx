@@ -61,7 +61,7 @@ function Nav({ explore, setExplore, light }: { explore: boolean; setExplore: (v:
 }
 
 /* ----------------------------------------------------------------------------
- * Hero: pinned stage with the studio mic. Tap it to play a chord.
+ * Hero: pinned stage with the braided mic stand. Tap it to play a chord.
  * --------------------------------------------------------------------------*/
 const HOTSPOTS = [
   { title: "Proof-of-Work profiles", spec: [["Verified via", "ISRC + streaming metadata"], ["Score", "0 – 100, live"]], roles: "Rappers · Vocalists" },
