@@ -61,7 +61,7 @@ function Nav({ explore, setExplore, light }: { explore: boolean; setExplore: (v:
 }
 
 /* ----------------------------------------------------------------------------
- * Hero: pinned stage with the braided sculpture. Click it to pluck a chord.
+ * Hero: pinned stage with the studio mic. Tap it to play a chord.
  * --------------------------------------------------------------------------*/
 const HOTSPOTS = [
   { title: "Proof-of-Work profiles", spec: [["Verified via", "ISRC + streaming metadata"], ["Score", "0 – 100, live"]], roles: "Rappers · Vocalists" },
@@ -134,7 +134,7 @@ function Hero({ explore, onPluck }: { explore: boolean; onPluck: () => void }) {
                 <MapPin size={11} /> Atlanta, GA · 214 online
               </span>
               <p>The producer you need, the engineer you trust, the cover artist who gets it. One yard, no middlemen.</p>
-              <p className="mt-3 text-[11px] text-white/40">Tap the cable to pluck it.</p>
+              <p className="mt-3 text-[11px] text-white/40">Tap the mic.</p>
             </motion.div>
           ) : (
             <motion.div
@@ -583,7 +583,7 @@ export default function Landing() {
   const pluck = useCallback(async () => {
     const a = await ensureAudio(audio);
     if (!a) return;
-    // Am9 strum, detuned slightly like a plucked cable.
+    // Am9 strum played when the mic is tapped.
     [57, 64, 67, 71, 72].forEach((m, i) => {
       const t = a.ctx.currentTime + i * 0.035;
       const o = a.ctx.createOscillator();

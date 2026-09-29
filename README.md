@@ -14,7 +14,7 @@ npm run build      # production build + type check
 
 ### Landing (`/`)
 A scroll-driven, cinematic front page modeled on the car-rental and "cordex" references:
-- **Hero stage**: a braided audio cable rendered live on canvas. It turns as you scroll, leans toward the cursor and plucks (sound plus vibration) when clicked. **Full mode / Explore** in the nav switches it to a copper weave with hotspots and spec cards.
+- **Hero stage**: a studio condenser mic rendered live on canvas. Its mesh grille spins as you scroll, it leans toward the cursor, and tapping it plays a chord and sends out sound rings. **Full mode / Explore** in the nav switches it to gold, with hotspots and spec cards.
 - **Statement**: copy revealed word by word as you scroll, with a creator strip that moves sideways as you scroll down.
 - **Toolkit carousel**: the "fleet" section. Swipe, drag or use the arrow keys, open the specs, then jump into the tool.
 - **Play**: eight live pads (keys `A`–`K`) with a spectrum readout.
